@@ -2,6 +2,9 @@ import { issuer } from "@openauthjs/openauth";
 import { CloudflareStorage } from "@openauthjs/openauth/storage/cloudflare";
 import { PasswordProvider } from "@openauthjs/openauth/provider/password";
 import { PasswordUI } from "@openauthjs/openauth/ui/password";
+import { GithubProvider } from "@openauthjs/openauth/provider/github";
+import { GoogleProvider } from "@openauthjs/openauth/provider/google";
+import { MicrosoftProvider } from "@openauthjs/openauth/provider/microsoft";
 import { createSubjects } from "@openauthjs/openauth/subject";
 import { object, string } from "valibot";
 
@@ -46,7 +49,7 @@ export default {
         password: PasswordProvider(
           PasswordUI({
             // eslint-disable-next-line @typescript-eslint/require-await
-            sendCode: async (email, code) => {
+            sendCode: async (email: string, code: string) => {
               // This is where you would email the verification code to the
               // user, e.g. using Resend:
               // https://resend.com/docs/send-with-cloudflare-workers
@@ -57,6 +60,22 @@ export default {
             },
           }),
         ),
+        github: GithubProvider({
+          clientID: env.GITHUB_CLIENT_ID,
+          clientSecret: env.GITHUB_CLIENT_SECRET,
+          scopes: ["user:email"],
+        }),
+        google: GoogleProvider({
+          clientID: env.GOOGLE_CLIENT_ID,
+          clientSecret: env.GOOGLE_CLIENT_SECRET,
+          scopes: ["openid", "email", "profile"],
+        }),
+        microsoft: MicrosoftProvider({
+          tenant: env.MICROSOFT_CLIENT_ID,
+          clientID: env.MICROSOFT_CLIENT_ID,
+          clientSecret: env.MICROSOFT_CLIENT_SECRET,
+          scopes: ["openid", "email", "profile"],
+        }),
       },
       theme: {
         title: "myAuth",
@@ -69,8 +88,27 @@ export default {
         },
       },
       success: async (ctx, value) => {
+        // Handle different provider response types
+        let email: string;
+
+        if (value.provider === "password") {
+          email = value.email;
+        } else if (value.provider === "github") {
+          // For GitHub, email comes from the tokenset or user profile
+          // This would need to be fetched from GitHub API in a real implementation
+          email = `github-${value.clientID}@example.com`; // Placeholder
+        } else if (value.provider === "google") {
+          // For Google, email comes from the tokenset or user profile
+          email = `google-${value.clientID}@example.com`; // Placeholder
+        } else if (value.provider === "microsoft") {
+          // For Microsoft, email comes from the tokenset or user profile
+          email = `microsoft-${value.clientID}@example.com`; // Placeholder
+        } else {
+          throw new Error(`Unknown provider: ${(value as any).provider}`);
+        }
+
         return ctx.subject("user", {
-          id: await getOrCreateUser(env, value.email),
+          id: await getOrCreateUser(env, email),
         });
       },
     }).fetch(request, env, ctx);

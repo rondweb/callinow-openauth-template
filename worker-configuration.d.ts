@@ -5,6 +5,12 @@ declare namespace Cloudflare {
 	interface Env {
 		AUTH_STORAGE: KVNamespace;
 		AUTH_DB: D1Database;
+		GITHUB_CLIENT_ID: string;
+		GITHUB_CLIENT_SECRET: string;
+		GOOGLE_CLIENT_ID: string;
+		GOOGLE_CLIENT_SECRET: string;
+		MICROSOFT_CLIENT_ID: string;
+		MICROSOFT_CLIENT_SECRET: string;
 	}
 }
 interface Env extends Cloudflare.Env {}

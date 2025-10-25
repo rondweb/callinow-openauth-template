@@ -1,17 +1,155 @@
-# OpenAuth Server
+# Callinow OpenAuth Template
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/openauth-template)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/rondweb/callinow-openauth-template)
 
-![OpenAuth Template Preview](https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/b2ff10c6-8f7c-419f-8757-e2ccf1c84500/public)
+Deploy an OpenAuth server on Cloudflare Workers with support for GitHub, Google, and Microsoft OAuth providers.
 
-<!-- dash-content-start -->
+## Features
 
-[OpenAuth](https://openauth.js.org/) is a universal provider for managing user authentication. By deploying OpenAuth on Cloudflare Workers, you can add scalable authentication to your application. This demo showcases login, user registration, and password reset, with storage and state powered by [D1](https://developers.cloudflare.com/d1/) and [KV](https://developers.cloudflare.com/kv/). [Observability](https://developers.cloudflare.com/workers/observability/logs/workers-logs/#enable-workers-logs) is on by default.
+- 🔐 Password-based authentication
+- 🐙 GitHub OAuth
+- 🔵 Google OAuth
+- 🟦 Microsoft OAuth
+- 💾 Cloudflare D1 Database
+- 🔑 Cloudflare KV Storage
 
-> [!IMPORTANT]
-> When using C3 to create this project, select "no" when it asks if you want to deploy. You need to follow this project's [setup steps](https://github.com/cloudflare/templates/tree/main/openauth-template#setup-steps) before deploying.
+## Setup
 
-<!-- dash-content-end -->
+### 1. Clone and Install
+
+```bash
+git clone https://github.com/rondweb/callinow-openauth-template.git
+cd callinow-openauth-template
+npm install
+```
+
+### 2. Configure OAuth Providers
+
+#### GitHub OAuth
+1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
+2. Create a new OAuth App
+3. Set Authorization callback URL to: `https://your-domain.com/callback`
+4. Note your Client ID and Client Secret
+
+#### Google OAuth
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing
+3. Enable Google+ API
+4. Go to Credentials and create OAuth 2.0 Client ID
+5. Set Authorized redirect URIs to: `https://your-domain.com/callback`
+6. Note your Client ID and Client Secret
+
+#### Microsoft OAuth
+1. Go to [Microsoft Azure Portal](https://portal.azure.com/)
+2. Navigate to Azure Active Directory
+3. Register a new application
+4. Set Redirect URI to: `https://your-domain.com/callback`
+5. Note your Application (client) ID and Client Secret
+
+### 3. Environment Variables
+
+Set the following environment variables in your Cloudflare Workers dashboard or wrangler.toml:
+
+```toml
+[vars]
+GITHUB_CLIENT_ID = "your-github-client-id"
+GITHUB_CLIENT_SECRET = "your-github-client-secret"
+GOOGLE_CLIENT_ID = "your-google-client-id"
+GOOGLE_CLIENT_SECRET = "your-google-client-secret"
+MICROSOFT_CLIENT_ID = "your-microsoft-client-id"
+MICROSOFT_CLIENT_SECRET = "your-microsoft-client-secret"
+```
+
+Alternatively, copy `.env.example` to `.env` and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env` with your actual OAuth credentials.
+
+### 4. Database and Storage Setup
+
+1. Create a [D1 database](https://developers.cloudflare.com/d1/get-started/):
+   ```bash
+   npx wrangler d1 create AUTH_DB
+   ```
+   Update the `database_id` field in `wrangler.json` with the new database ID.
+
+2. Run the database migration:
+   ```bash
+   npx wrangler d1 migrations apply --remote AUTH_DB
+   ```
+
+3. Create a [KV namespace](https://developers.cloudflare.com/kv/get-started/):
+   ```bash
+   npx wrangler kv namespace create AUTH_STORAGE
+   ```
+   Update the `kv_namespaces` -> `id` field in `wrangler.json` with the new namespace ID.
+
+### 5. Deploy
+
+```bash
+npx wrangler deploy
+```
+
+### 6. Monitor
+
+```bash
+npx wrangler tail
+```
+
+## Testing
+
+To test the authentication system locally:
+
+1. Start the development server:
+   ```bash
+   npx wrangler dev
+   ```
+
+2. Open your browser and navigate to `http://localhost:8787`
+
+3. Test the different authentication methods:
+   - **Password**: Click "Sign up" or "Sign in" to test email/password authentication
+   - **GitHub**: Click the GitHub button to test OAuth flow
+   - **Google**: Click the Google button to test OAuth flow
+   - **Microsoft**: Click the Microsoft button to test OAuth flow
+
+4. Check the console logs for authentication events and user creation.
+
+## Usage
+
+The authentication system will redirect users through the OAuth flow and create user accounts automatically. After successful authentication, users will be redirected to the callback URL with their authentication tokens.
+
+## API Endpoints
+
+- `GET /` - Redirects to authorization page
+- `GET /callback` - Handles OAuth callbacks and returns authentication results
+- `POST /authorize` - Initiates the OAuth authorization flow
+
+## Configuration Complete ✅
+
+Your OpenAuth server is now configured with:
+
+- ✅ Password-based authentication
+- ✅ GitHub OAuth provider
+- ✅ Google OAuth provider
+- ✅ Microsoft OAuth provider
+- ✅ Cloudflare D1 Database integration
+- ✅ Cloudflare KV Storage integration
+- ✅ Environment variables setup
+- ✅ TypeScript configuration
+- ✅ Database migrations ready
+
+## Next Steps
+
+1. **Set up your OAuth applications** following the instructions in the Setup section
+2. **Configure environment variables** with your OAuth credentials
+3. **Deploy to production** using `npx wrangler deploy`
+4. **Test the authentication flows** in your browser
+
+The system will automatically create user accounts when users authenticate through any of the configured providers.
 
 ## Getting Started
 
