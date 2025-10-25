@@ -33,9 +33,36 @@ export default {
       url.pathname = "/authorize";
       return Response.redirect(url.toString());
     } else if (url.pathname === "/callback") {
-      return Response.json({
-        message: "OAuth flow complete!",
-        params: Object.fromEntries(url.searchParams.entries()),
+      // Handle successful authentication callback
+      return new Response(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Authentication Successful</title>
+          <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+            .success { color: #28a745; font-size: 24px; margin-bottom: 20px; }
+            .info { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .params { text-align: left; max-width: 600px; margin: 0 auto; }
+            pre { background: #e9ecef; padding: 10px; border-radius: 4px; overflow-x: auto; }
+          </style>
+        </head>
+        <body>
+          <div class="success">✅ Authentication Successful!</div>
+          <div class="info">
+            <h3>Authentication Details</h3>
+            <div class="params">
+              <p><strong>URL Parameters:</strong></p>
+              <pre>${url.searchParams.toString()}</pre>
+              <p><strong>Parsed Parameters:</strong></p>
+              <pre>${JSON.stringify(Object.fromEntries(url.searchParams.entries()), null, 2)}</pre>
+            </div>
+          </div>
+          <p><a href="/">← Back to Home</a></p>
+        </body>
+        </html>
+      `, {
+        headers: { 'Content-Type': 'text/html' }
       });
     }
 
@@ -94,15 +121,50 @@ export default {
         if (value.provider === "password") {
           email = value.email;
         } else if (value.provider === "github") {
-          // For GitHub, email comes from the tokenset or user profile
-          // This would need to be fetched from GitHub API in a real implementation
-          email = `github-${value.clientID}@example.com`; // Placeholder
+          // For GitHub, we need to fetch user info from GitHub API
+          try {
+            const userResponse = await fetch("https://api.github.com/user", {
+              headers: {
+                Authorization: `Bearer ${value.tokenset.access}`,
+                "User-Agent": "OpenAuth-Template",
+              },
+            });
+            const userData = await userResponse.json() as any;
+            email = userData.email || `github-${userData.id}@github.com`;
+          } catch (error) {
+            console.error("Failed to fetch GitHub user data:", error);
+            email = `github-${value.clientID}@github.com`;
+          }
         } else if (value.provider === "google") {
-          // For Google, email comes from the tokenset or user profile
-          email = `google-${value.clientID}@example.com`; // Placeholder
+          // For Google, check the raw token data for ID token
+          try {
+            const rawToken = value.tokenset.raw;
+            if (rawToken && rawToken.id_token) {
+              const tokenParts = rawToken.id_token.split('.');
+              const payload = JSON.parse(atob(tokenParts[1]));
+              email = payload.email || `google-${value.clientID}@google.com`;
+            } else {
+              email = `google-${value.clientID}@google.com`;
+            }
+          } catch (error) {
+            console.error("Failed to decode Google ID token:", error);
+            email = `google-${value.clientID}@google.com`;
+          }
         } else if (value.provider === "microsoft") {
-          // For Microsoft, email comes from the tokenset or user profile
-          email = `microsoft-${value.clientID}@example.com`; // Placeholder
+          // For Microsoft, check the raw token data for ID token
+          try {
+            const rawToken = value.tokenset.raw;
+            if (rawToken && rawToken.id_token) {
+              const tokenParts = rawToken.id_token.split('.');
+              const payload = JSON.parse(atob(tokenParts[1]));
+              email = payload.preferred_username || payload.email || `microsoft-${value.clientID}@microsoft.com`;
+            } else {
+              email = `microsoft-${value.clientID}@microsoft.com`;
+            }
+          } catch (error) {
+            console.error("Failed to decode Microsoft ID token:", error);
+            email = `microsoft-${value.clientID}@microsoft.com`;
+          }
         } else {
           throw new Error(`Unknown provider: ${(value as any).provider}`);
         }

@@ -141,6 +141,8 @@ Your OpenAuth server is now configured with:
 - ✅ Environment variables setup
 - ✅ TypeScript configuration
 - ✅ Database migrations ready
+- ✅ Proper OAuth callback handling
+- ✅ User email extraction from OAuth tokens
 
 ## Next Steps
 
@@ -150,6 +152,26 @@ Your OpenAuth server is now configured with:
 4. **Test the authentication flows** in your browser
 
 The system will automatically create user accounts when users authenticate through any of the configured providers.
+
+## Troubleshooting
+
+If you encounter issues with OAuth providers:
+
+1. **Check your OAuth app configurations** - Ensure redirect URIs match exactly
+2. **Verify environment variables** - Make sure all CLIENT_ID and CLIENT_SECRET values are set
+3. **Check browser console** - Look for CORS or token-related errors
+4. **Monitor worker logs** - Use `npx wrangler tail` to see authentication events
+5. **Test individual providers** - Try each OAuth provider separately to isolate issues
+
+## OAuth Flow
+
+1. User visits your site and clicks an OAuth provider button
+2. User is redirected to the provider's authorization page
+3. User grants permission and is redirected back to `/callback`
+4. OpenAuth processes the authorization code and exchanges it for tokens
+5. User email is extracted from the OAuth response
+6. User account is created in the database
+7. User is redirected to the success page with authentication details
 
 ## Getting Started
 
