@@ -48,25 +48,52 @@ npm install
 
 ### 3. Environment Variables
 
-Set the following environment variables in your Cloudflare Workers dashboard or wrangler.toml:
+**⚠️ IMPORTANT**: You must set these in your Cloudflare Workers environment, not just locally.
 
-```toml
-[vars]
-GITHUB_CLIENT_ID = "your-github-client-id"
-GITHUB_CLIENT_SECRET = "your-github-client-secret"
-GOOGLE_CLIENT_ID = "your-google-client-id"
-GOOGLE_CLIENT_SECRET = "your-google-client-secret"
-MICROSOFT_CLIENT_ID = "your-microsoft-client-id"
-MICROSOFT_CLIENT_SECRET = "your-microsoft-client-secret"
-```
+#### Option 1: Using Wrangler CLI (Recommended)
 
-Alternatively, copy `.env.example` to `.env` and fill in your values:
+1. **Login to Cloudflare**:
+   ```bash
+   npx wrangler login
+   ```
+
+2. **Set secrets for your project**:
+   ```bash
+   npx wrangler secret put GITHUB_CLIENT_ID
+   npx wrangler secret put GITHUB_CLIENT_SECRET
+   npx wrangler secret put GOOGLE_CLIENT_ID
+   npx wrangler secret put GOOGLE_CLIENT_SECRET
+   npx wrangler secret put MICROSOFT_CLIENT_ID
+   npx wrangler secret put MICROSOFT_CLIENT_SECRET
+   ```
+
+3. **Deploy with secrets**:
+   ```bash
+   npx wrangler deploy
+   ```
+
+#### Option 2: Using Cloudflare Dashboard
+
+1. Go to [Cloudflare Workers Dashboard](https://dash.cloudflare.com/workers)
+2. Select your worker
+3. Go to **Settings** → **Environment Variables**
+4. Add each variable as a secret:
+   - `GITHUB_CLIENT_ID`
+   - `GITHUB_CLIENT_SECRET`
+   - `GOOGLE_CLIENT_ID`
+   - `GOOGLE_CLIENT_SECRET`
+   - `MICROSOFT_CLIENT_ID`
+   - `MICROSOFT_CLIENT_SECRET`
+
+#### Option 3: Using wrangler.toml (for development)
+
+For local development, you can use the `.env` file (copy from `.env.example`):
 
 ```bash
 cp .env.example .env
 ```
 
-Then edit `.env` with your actual OAuth credentials.
+Then edit `.env` with your actual OAuth credentials. **Note**: This only works for local development with `wrangler dev`.
 
 ### 4. Database and Storage Setup
 
