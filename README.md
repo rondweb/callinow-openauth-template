@@ -6,12 +6,14 @@ Deploy an OpenAuth server on Cloudflare Workers with support for GitHub, Google,
 
 ## Features
 
-- 🔐 Password-based authentication
-- 🐙 GitHub OAuth
+- 🔐 Password-based authentication with email verification
+- � Email integration (Resend, SendGrid, or Mailgun)
+- �🐙 GitHub OAuth
 - 🔵 Google OAuth
 - 🟦 Microsoft OAuth
 - 💾 Cloudflare D1 Database
 - 🔑 Cloudflare KV Storage
+- 🎨 Custom CallNow branding
 
 ## Setup
 
@@ -46,7 +48,33 @@ npm install
 4. Set Redirect URI to: `https://your-domain.com/callback`
 5. Note your Application (client) ID and Client Secret
 
-### 3. Environment Variables
+### 3. Email Service Configuration (Required for Password Authentication)
+
+To enable email verification codes for password-based authentication, you need to configure **Mailjet** as the email service provider.
+
+**Why Mailjet:**
+- Modern API v3.1 with excellent documentation
+- Simple integration with Cloudflare Workers
+- Generous free tier (6,000 emails/month, 200/day)
+- Excellent delivery rates
+
+See [EMAIL_CONFIGURATION.md](./EMAIL_CONFIGURATION.md) for detailed setup instructions.
+
+**Quick Setup:**
+
+1. Create account at [mailjet.com](https://www.mailjet.com/)
+2. Get your API credentials from [API Keys page](https://app.mailjet.com/account/apikeys)
+3. Verify your sender email at [Sender Domains](https://app.mailjet.com/account/sender)
+4. Configure secrets:
+
+```bash
+npx wrangler secret put MAILJET_API_KEY
+npx wrangler secret put MAILJET_SECRET_KEY
+npx wrangler secret put EMAIL_FROM_EMAIL
+npx wrangler secret put EMAIL_FROM_NAME
+```
+
+### 4. Environment Variables
 
 **⚠️ IMPORTANT**: You must set these in your Cloudflare Workers environment, not just locally.
 

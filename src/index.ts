@@ -141,15 +141,19 @@ export default {
       providers: {
         password: PasswordProvider(
           PasswordUI({
-            // eslint-disable-next-line @typescript-eslint/require-await
             sendCode: async (email: string, code: string) => {
-              // This is where you would email the verification code to the
-              // user, e.g. using Resend:
-              // https://resend.com/docs/send-with-cloudflare-workers
-              console.log(`Sending code ${code} to ${email}`);
+              // Send verification code via email using SMTP or email service
+              try {
+                await sendVerificationEmail(env, email, code);
+                console.log(`✅ Verification code sent to ${email}`);
+              } catch (error) {
+                console.error(`❌ Failed to send email to ${email}:`, error);
+                // Fallback: log the code (for development only)
+                console.log(`Verification code for ${email}: ${code}`);
+              }
             },
             copy: {
-              input_code: "Code (check Worker logs)",
+              input_code: "Código de Verificação (verifique seu email)",
             },
           }),
         ),
@@ -171,14 +175,10 @@ export default {
         }),
       },
       theme: {
-        title: "myAuth",
+        title: "CalliNow",
         primary: "#0051c3",
         favicon: "https://workers.cloudflare.com//favicon.ico",
-        logo: {
-          dark: "https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/db1e5c92-d3a6-4ea9-3e72-155844211f00/public",
-          light:
-            "https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/fa5a3023-7da9-466b-98a7-4ce01ee6c700/public",
-        },
+        logo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='60'%3E%3Ctext x='10' y='40' font-family='Arial, sans-serif' font-size='36' font-weight='bold' fill='%230051c3'%3ECalliNow%3C/text%3E%3C/svg%3E",
       },
       success: async (ctx: any, value: any) => {
         // Handle different provider response types
@@ -363,4 +363,94 @@ async function getUserInfo(env: Env, userId: string): Promise<any> {
     .first();
   
   return user;
+}
+
+/**
+ * Sends a verification email with the code using Mailjet API v3.1
+ * Documentation: https://dev.mailjet.com/email/guides/send-api-v31/
+ */
+async function sendVerificationEmail(env: Env, email: string, code: string): Promise<void> {
+  if (!env.MAILJET_API_KEY || !env.MAILJET_SECRET_KEY) {
+    throw new Error('Mailjet credentials not configured. Please set MAILJET_API_KEY and MAILJET_SECRET_KEY in your environment variables.');
+  }
+
+  // Create Basic Authentication header (API_KEY:SECRET_KEY)
+  const credentials = btoa(`${env.MAILJET_API_KEY}:${env.MAILJET_SECRET_KEY}`);
+  
+  const fromEmail = env.EMAIL_FROM_EMAIL || 'noreply@callinow.com';
+  const fromName = env.EMAIL_FROM_NAME || 'CallNow';
+
+  // Prepare the email payload according to Mailjet API v3.1
+  const payload = {
+    Messages: [
+      {
+        From: {
+          Email: fromEmail,
+          Name: fromName,
+        },
+        To: [
+          {
+            Email: email,
+          },
+        ],
+        Subject: 'Seu Código de Verificação - CallNow',
+        TextPart: `Olá,\n\nVocê solicitou um código de verificação para acessar sua conta CallNow.\n\nSeu código de verificação é: ${code}\n\nDigite este código na página de login para continuar.\n\nEste código expira em 10 minutos.\n\nSe você não solicitou este código, ignore este email.\n\n© ${new Date().getFullYear()} CallNow. Todos os direitos reservados.`,
+        HTMLPart: `
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #0051c3 0%, #0066ff 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                .code-box { background: white; border: 2px solid #0051c3; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0; }
+                .code { font-size: 32px; font-weight: bold; color: #0051c3; letter-spacing: 5px; }
+                .footer { text-align: center; color: #666; font-size: 12px; margin-top: 20px; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h1>🔐 Código de Verificação</h1>
+                </div>
+                <div class="content">
+                  <p>Olá,</p>
+                  <p>Você solicitou um código de verificação para acessar sua conta CallNow.</p>
+                  <div class="code-box">
+                    <div class="code">${code}</div>
+                  </div>
+                  <p>Digite este código na página de login para continuar.</p>
+                  <p><strong>Este código expira em 10 minutos.</strong></p>
+                  <p>Se você não solicitou este código, ignore este email.</p>
+                </div>
+                <div class="footer">
+                  <p>© ${new Date().getFullYear()} CallNow. Todos os direitos reservados.</p>
+                </div>
+              </div>
+            </body>
+          </html>
+        `,
+      },
+    ],
+  };
+
+  // Send email via Mailjet API v3.1
+  const response = await fetch('https://api.mailjet.com/v3.1/send', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${credentials}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.text();
+    console.error('Mailjet API error:', errorData);
+    throw new Error(`Failed to send email via Mailjet: ${response.status} ${response.statusText}`);
+  }
+
+  const result = await response.json();
+  console.log('Email sent successfully via Mailjet:', result);
 }

@@ -11,6 +11,11 @@ declare namespace Cloudflare {
 		GOOGLE_CLIENT_SECRET: string;
 		MICROSOFT_CLIENT_ID: string;
 		MICROSOFT_CLIENT_SECRET: string;
+		// Mailjet email service configuration
+		MAILJET_API_KEY?: string;
+		MAILJET_SECRET_KEY?: string;
+		EMAIL_FROM_EMAIL?: string;
+		EMAIL_FROM_NAME?: string;
 	}
 }
 interface Env extends Cloudflare.Env {}
