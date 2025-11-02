@@ -1,0 +1,6 @@
+-- Migration number: 0002 	 2025-11-02T00:00:00.000Z
+ALTER TABLE user ADD COLUMN name TEXT;
+ALTER TABLE user ADD COLUMN avatar_url TEXT;
+ALTER TABLE user ADD COLUMN provider TEXT;
+ALTER TABLE user ADD COLUMN provider_id TEXT;
+ALTER TABLE user ADD COLUMN updated_at TIMESTAMP;
