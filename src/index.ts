@@ -36,7 +36,7 @@ export default {
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Reset Unverified Account - CallNow</title>
+          <title>Reset Unverified Account - CalliNow</title>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
@@ -326,6 +326,39 @@ export default {
       }
     }
     
+    // Debug endpoint to check KV storage
+    if (url.pathname === "/debug/storage") {
+      try {
+        // List all keys in AUTH_STORAGE (KV)
+        const listResult = await env.AUTH_STORAGE.list({ limit: 100 });
+        
+        // For debugging, we can show key names (but not values for security)
+        const keys = listResult.keys.map(k => ({
+          name: k.name,
+          expiration: k.expiration,
+          metadata: k.metadata
+        }));
+        
+        return new Response(JSON.stringify({
+          count: keys.length,
+          keys: keys,
+          list_complete: listResult.list_complete
+        }, null, 2), {
+          status: 200,
+          headers: { 
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*"
+          }
+        });
+      } catch (error) {
+        console.error(`Error listing KV storage:`, error);
+        return new Response(JSON.stringify({ error: String(error) }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+    
     // Endpoint /auth/fetch-openauth-profile/:userId - returns authenticated user information
     const profileMatch = url.pathname.match(/^\/auth\/fetch-openauth-profile\/(.+)$/);
     if (profileMatch) {
@@ -441,6 +474,108 @@ export default {
       // Handle successful authentication callback
       const code = url.searchParams.get("code");
       const state = url.searchParams.get("state");
+      const error = url.searchParams.get("error");
+      const errorDescription = url.searchParams.get("error_description");
+      
+      // Enhanced logging for debugging
+      console.log(`[CALLBACK] Received callback request`);
+      console.log(`[CALLBACK] Full URL: ${url.toString()}`);
+      console.log(`[CALLBACK] Code: ${code}`);
+      console.log(`[CALLBACK] State: ${state}`);
+      console.log(`[CALLBACK] Error: ${error}`);
+      console.log(`[CALLBACK] Error Description: ${errorDescription}`);
+      console.log(`[CALLBACK] All params:`, Object.fromEntries(url.searchParams.entries()));
+      
+      // If there's an error, show it prominently
+      if (error) {
+        return new Response(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Authentication Error</title>
+            <style>
+              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
+              .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+              .error { color: #dc3545; font-size: 24px; margin-bottom: 20px; }
+              .details { background: #f8d7da; color: #721c24; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left; }
+              pre { background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
+              .button { display: inline-block; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 10px; }
+              .button:hover { background: #0056b3; }
+              .troubleshooting { background: #d1ecf1; color: #0c5460; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="error">❌ Authentication Failed</div>
+              <div class="details">
+                <h3>Error Details</h3>
+                <p><strong>Error Code:</strong> ${error}</p>
+                <p><strong>Description:</strong> ${errorDescription || 'No description provided'}</p>
+              </div>
+              <div class="troubleshooting">
+                <h3>🔧 Troubleshooting Steps</h3>
+                <ol>
+                  <li><strong>URL Consistency:</strong> Make sure you're using the same URL (either <code>http://127.0.0.1:8787</code> or <code>http://localhost:8787</code>, not both)</li>
+                  <li><strong>Browser Cache:</strong> Clear your browser cache and cookies for this site</li>
+                  <li><strong>Cookie Settings:</strong> Check that third-party cookies are not blocked</li>
+                  <li><strong>Session Timeout:</strong> If too much time passed between steps, the session may have expired</li>
+                  <li><strong>Start Fresh:</strong> Try the authentication flow again from the beginning</li>
+                </ol>
+              </div>
+              <a href="/" class="button">← Try Again</a>
+            </div>
+          </body>
+          </html>
+        `, {
+          headers: { "Content-Type": "text/html" },
+          status: 400
+        });
+      }
+      
+      // If no code, show a warning
+      if (!code) {
+        return new Response(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Missing Authorization Code</title>
+            <style>
+              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
+              .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+              .warning { color: #ffc107; font-size: 24px; margin-bottom: 20px; }
+              .details { background: #fff3cd; color: #856404; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left; }
+              pre { background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
+              .button { display: inline-block; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 10px; }
+              .button:hover { background: #0056b3; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="warning">⚠️ Authorization Code Not Found</div>
+              <div class="details">
+                <h3>What Happened?</h3>
+                <p>The authentication callback was received, but the authorization code is missing from the URL.</p>
+                <p><strong>Received Parameters:</strong></p>
+                <pre>${JSON.stringify(Object.fromEntries(url.searchParams.entries()), null, 2)}</pre>
+                <h3>Common Causes:</h3>
+                <ul>
+                  <li>The authentication flow was interrupted</li>
+                  <li>The session expired (took too long to complete)</li>
+                  <li>URL mismatch (using localhost vs 127.0.0.1)</li>
+                  <li>Browser blocking cookies/storage</li>
+                </ul>
+                <h3>Solution:</h3>
+                <p>Start the authentication process again from the beginning.</p>
+              </div>
+              <a href="/" class="button">← Back to Login</a>
+            </div>
+          </body>
+          </html>
+        `, {
+          headers: { "Content-Type": "text/html" },
+          status: 400
+        });
+      }
       
       return new Response(`
         <!DOCTYPE html>
@@ -568,6 +703,9 @@ export default {
       success: async (ctx: any, value: any) => {
         // Handle different provider response types
         let userInfo: UserInfo;
+        
+        console.log(`[SUCCESS HANDLER] Provider: ${value.provider}`);
+        console.log(`[SUCCESS HANDLER] Value:`, JSON.stringify(value, null, 2));
 
         if (value.provider === "password") {
           userInfo = {
@@ -577,6 +715,7 @@ export default {
             provider: "password",
             provider_id: value.email,
           };
+          console.log(`[SUCCESS HANDLER] Created password userInfo:`, userInfo);
         } else if (value.provider === "github") {
           // For GitHub, we need to fetch user info from GitHub API
           try {
