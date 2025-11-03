@@ -30,13 +30,14 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const url = new URL(request.url);
     
-    // HTML page to reset an unverified account
-    if (url.pathname === "/auth/reset-unverified" && request.method === "GET") {
+    // HTML page to help with unverified accounts
+    if (url.pathname === "/auth/unverified-account-help" && request.method === "GET") {
+      const email = url.searchParams.get('email');
       return new Response(`
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Reset Unverified Account - CalliNow</title>
+          <title>Unverified Account Help - CalliNow</title>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
@@ -71,20 +72,15 @@ export default {
               font-size: 14px;
               line-height: 1.6;
             }
-            .warning {
-              background: #fff3cd;
-              border-left: 4px solid #ffc107;
+            .info-box {
+              background: #eef2ff;
+              border-left: 4px solid #667eea;
               padding: 15px;
               margin-bottom: 20px;
               border-radius: 4px;
             }
-            .warning-title {
-              font-weight: bold;
-              color: #856404;
-              margin-bottom: 5px;
-            }
-            .warning-text {
-              color: #856404;
+            .info-text {
+              color: #4338ca;
               font-size: 14px;
               line-height: 1.5;
             }
@@ -103,17 +99,21 @@ export default {
               font-size: 16px;
               transition: all 0.3s;
               margin-bottom: 20px;
+              background-color: #f8f9fa;
             }
             input[type="email"]:focus {
               outline: none;
               border-color: #667eea;
               box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
             }
+            .button-group {
+              display: flex;
+              flex-direction: column;
+              gap: 12px;
+            }
             button {
               width: 100%;
               padding: 14px;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              color: white;
               border: none;
               border-radius: 8px;
               font-size: 16px;
@@ -128,6 +128,18 @@ export default {
             button:disabled {
               opacity: 0.6;
               cursor: not-allowed;
+            }
+            #resendBtn {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+            }
+            #deleteBtn {
+              background: #f8d7da;
+              color: #721c24;
+              border: 1px solid #f5c6cb;
+            }
+             #deleteBtn:hover:not(:disabled) {
+              background: #f5c6cb;
             }
             .back-link {
               display: block;
@@ -162,53 +174,82 @@ export default {
         </head>
         <body>
           <div class="container">
-            <h1>🔄 Reset Account</h1>
+            <h1>🤔 Unverified Account</h1>
             <p class="subtitle">
-              If you created an account but couldn't verify the code,
-              use this form to reset and try again.
+              It looks like an account was created with this email, but not verified.
+              What would you like to do?
             </p>
-            
-            <div class="warning">
-              <div class="warning-title">⚠️ Attention</div>
-              <div class="warning-text">
-                This action will <strong>remove your unverified account</strong>.
-                You will be able to create a new account with the same email afterwards.
-              </div>
-            </div>
             
             <div id="message" class="message hidden"></div>
             
-            <form id="resetForm">
+            <form id="actionForm">
               <label for="email">Your Email</label>
               <input 
                 type="email" 
                 id="email" 
                 name="email" 
+                value="${email || ''}"
                 placeholder="you@example.com"
                 required
+                readonly
               >
               
-              <button type="submit" id="submitBtn">
-                Reset Unverified Account
-              </button>
+              <div class="button-group">
+                <button type="button" id="resendBtn">
+                  ✉️ Resend Verification Code
+                </button>
+                <button type="button" id="deleteBtn">
+                  🗑️ Delete and Start Over
+                </button>
+              </div>
             </form>
             
             <a href="/" class="back-link">← Back to login</a>
           </div>
           
           <script>
-            const form = document.getElementById('resetForm');
+            const form = document.getElementById('actionForm');
             const messageDiv = document.getElementById('message');
-            const submitBtn = document.getElementById('submitBtn');
+            const resendBtn = document.getElementById('resendBtn');
+            const deleteBtn = document.getElementById('deleteBtn');
+            const emailInput = document.getElementById('email');
             
-            form.addEventListener('submit', async (e) => {
-              e.preventDefault();
+            // Function to handle button/form state
+            function setLoading(isLoading) {
+              resendBtn.disabled = isLoading;
+              deleteBtn.disabled = isLoading;
+              resendBtn.textContent = isLoading ? 'Processing...' : '✉️ Resend Verification Code';
+              deleteBtn.textContent = isLoading ? 'Deleting...' : '🗑️ Delete and Start Over';
+            }
+
+            // Action 1: Resend verification code (by redirecting to login)
+            resendBtn.addEventListener('click', () => {
+              const email = emailInput.value;
+              if (!email) {
+                messageDiv.className = 'message error';
+                messageDiv.textContent = '❌ Please enter your email first.';
+                return;
+              }
+              // Redirect to the login flow, which will trigger a new code
+              const loginUrl = new URL('/', window.location.origin);
+              loginUrl.searchParams.set('email', email); // Pre-fill email
+              window.location.href = loginUrl.toString();
+            });
+
+            // Action 2: Delete the unverified account
+            deleteBtn.addEventListener('click', async () => {
+              const email = emailInput.value;
+              if (!email) {
+                messageDiv.className = 'message error';
+                messageDiv.textContent = '❌ Please enter your email first.';
+                return;
+              }
               
-              const email = document.getElementById('email').value;
-              
-              // Disable button and show loading
-              submitBtn.disabled = true;
-              submitBtn.textContent = 'Processing...';
+              if (!confirm('Are you sure you want to delete this unverified account?')) {
+                return;
+              }
+
+              setLoading(true);
               messageDiv.className = 'message hidden';
               
               try {
@@ -222,23 +263,19 @@ export default {
                 
                 if (response.ok && data.success) {
                   messageDiv.className = 'message success';
-                  messageDiv.textContent = '✅ ' + data.message + ' Redirecting to login...';
-                  
-                  // Redirect to login after 3 seconds
+                  messageDiv.textContent = '✅ ' + data.message + ' Redirecting to signup...';
                   setTimeout(() => {
-                    window.location.href = '/';
+                    window.location.href = '/'; // Redirect to start fresh
                   }, 3000);
                 } else {
                   messageDiv.className = 'message error';
                   messageDiv.textContent = '❌ ' + (data.message || data.error || 'Unknown error');
-                  submitBtn.disabled = false;
-                  submitBtn.textContent = 'Reset Unverified Account';
+                  setLoading(false);
                 }
               } catch (error) {
                 messageDiv.className = 'message error';
                 messageDiv.textContent = '❌ Connection error. Please try again.';
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Reset Unverified Account';
+                setLoading(false);
               }
             });
           </script>
@@ -668,7 +705,7 @@ export default {
               change_prompt: "Forgot password?",
               login_description: "Enter your email to receive a verification code",
               register_description: "Create a new account using your email",
-              error_email_taken: "❌ This email is already registered but not verified. Try to LOGIN instead of creating an account. If you didn't receive the code, use the 'Resend verification code' button.",
+              error_email_taken: `❌ This email is already registered but not verified. <a href="/auth/unverified-account-help?email={email}">Click here to resolve this issue.</a>`,
               error_invalid_code: "❌ Invalid code. Check your input or click 'Resend verification code'.",
               error_invalid_email: "❌ Invalid email. Check the format.",
               error_invalid_password: "❌ Password too weak. Use at least 8 characters.",
