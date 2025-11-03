@@ -48,6 +48,14 @@ cp .dev.vars.example .dev.vars
   - Obtenha em: https://portal.azure.com
   - Configure `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`
 
+- **OpenAuth Encryption Keys** (obrigatório):
+  - Gere as chaves de encriptação com o seguinte comando:
+    ```bash
+    node generate-keys.js
+    ```
+  - Copie o output e cole-o no seu ficheiro `.dev.vars`.
+  - **IMPORTANTE**: Ambas as chaves, `PRIVATE_KEY` e `PUBLIC_KEY`, são necessárias.
+
 📚 **Documentação completa**: Veja `EMAIL_CONFIGURATION.md` para mais detalhes.
 
 ### 1. Aplicar a Migração do Banco de Dados

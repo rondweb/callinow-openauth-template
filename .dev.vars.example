@@ -26,3 +26,9 @@ MAILJET_SECRET_KEY=your-mailjet-secret-key
 # Verify your domain/email at: https://app.mailjet.com/account/sender
 EMAIL_FROM_EMAIL=noreply@yourdomain.com
 EMAIL_FROM_NAME=YourAppName
+
+# OpenAuth Encryption Keys
+# Generate with `node generate-keys.js`
+# IMPORTANT: These keys should be stored as secrets in a production environment
+PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n"
+PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\\n...\\n-----END PUBLIC KEY-----\\n"

@@ -671,7 +671,7 @@ export default {
         namespace: env.AUTH_STORAGE,
       }),
       subjects,
-      ...(env.PRIVATE_KEY ? { keys: { private: env.PRIVATE_KEY } } : {}),
+      ...(env.PRIVATE_KEY && env.PUBLIC_KEY ? { keys: { private: env.PRIVATE_KEY, public: env.PUBLIC_KEY } } : {}),
       providers: {
         password: PasswordProvider(
           PasswordUI({
