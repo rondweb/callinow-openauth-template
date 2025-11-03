@@ -30,6 +30,276 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const url = new URL(request.url);
     
+    // HTML page to reset an unverified account
+    if (url.pathname === "/auth/reset-unverified" && request.method === "GET") {
+      return new Response(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Reset Unverified Account - CallNow</title>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              min-height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 20px;
+            }
+            .container {
+              background: white;
+              border-radius: 16px;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+              max-width: 500px;
+              width: 100%;
+              padding: 40px;
+            }
+            h1 { 
+              color: #333;
+              font-size: 28px;
+              margin-bottom: 10px;
+              text-align: center;
+            }
+            .subtitle {
+              color: #666;
+              text-align: center;
+              margin-bottom: 30px;
+              font-size: 14px;
+              line-height: 1.6;
+            }
+            .warning {
+              background: #fff3cd;
+              border-left: 4px solid #ffc107;
+              padding: 15px;
+              margin-bottom: 20px;
+              border-radius: 4px;
+            }
+            .warning-title {
+              font-weight: bold;
+              color: #856404;
+              margin-bottom: 5px;
+            }
+            .warning-text {
+              color: #856404;
+              font-size: 14px;
+              line-height: 1.5;
+            }
+            label {
+              display: block;
+              color: #333;
+              font-weight: 600;
+              margin-bottom: 8px;
+              font-size: 14px;
+            }
+            input[type="email"] {
+              width: 100%;
+              padding: 12px 16px;
+              border: 2px solid #e0e0e0;
+              border-radius: 8px;
+              font-size: 16px;
+              transition: all 0.3s;
+              margin-bottom: 20px;
+            }
+            input[type="email"]:focus {
+              outline: none;
+              border-color: #667eea;
+              box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            }
+            button {
+              width: 100%;
+              padding: 14px;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              border: none;
+              border-radius: 8px;
+              font-size: 16px;
+              font-weight: 600;
+              cursor: pointer;
+              transition: transform 0.2s, box-shadow 0.2s;
+            }
+            button:hover:not(:disabled) {
+              transform: translateY(-2px);
+              box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            }
+            button:disabled {
+              opacity: 0.6;
+              cursor: not-allowed;
+            }
+            .back-link {
+              display: block;
+              text-align: center;
+              margin-top: 20px;
+              color: #667eea;
+              text-decoration: none;
+              font-size: 14px;
+            }
+            .back-link:hover {
+              text-decoration: underline;
+            }
+            .message {
+              padding: 15px;
+              border-radius: 8px;
+              margin-bottom: 20px;
+              font-size: 14px;
+              line-height: 1.5;
+            }
+            .success {
+              background: #d4edda;
+              border-left: 4px solid #28a745;
+              color: #155724;
+            }
+            .error {
+              background: #f8d7da;
+              border-left: 4px solid #dc3545;
+              color: #721c24;
+            }
+            .hidden { display: none; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>🔄 Reset Account</h1>
+            <p class="subtitle">
+              If you created an account but couldn't verify the code,
+              use this form to reset and try again.
+            </p>
+            
+            <div class="warning">
+              <div class="warning-title">⚠️ Attention</div>
+              <div class="warning-text">
+                This action will <strong>remove your unverified account</strong>.
+                You will be able to create a new account with the same email afterwards.
+              </div>
+            </div>
+            
+            <div id="message" class="message hidden"></div>
+            
+            <form id="resetForm">
+              <label for="email">Your Email</label>
+              <input 
+                type="email" 
+                id="email" 
+                name="email" 
+                placeholder="you@example.com"
+                required
+              >
+              
+              <button type="submit" id="submitBtn">
+                Reset Unverified Account
+              </button>
+            </form>
+            
+            <a href="/" class="back-link">← Back to login</a>
+          </div>
+          
+          <script>
+            const form = document.getElementById('resetForm');
+            const messageDiv = document.getElementById('message');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            form.addEventListener('submit', async (e) => {
+              e.preventDefault();
+              
+              const email = document.getElementById('email').value;
+              
+              // Disable button and show loading
+              submitBtn.disabled = true;
+              submitBtn.textContent = 'Processing...';
+              messageDiv.className = 'message hidden';
+              
+              try {
+                const response = await fetch('/auth/reset-unverified', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                  messageDiv.className = 'message success';
+                  messageDiv.textContent = '✅ ' + data.message + ' Redirecting to login...';
+                  
+                  // Redirect to login after 3 seconds
+                  setTimeout(() => {
+                    window.location.href = '/';
+                  }, 3000);
+                } else {
+                  messageDiv.className = 'message error';
+                  messageDiv.textContent = '❌ ' + (data.message || data.error || 'Unknown error');
+                  submitBtn.disabled = false;
+                  submitBtn.textContent = 'Reset Unverified Account';
+                }
+              } catch (error) {
+                messageDiv.className = 'message error';
+                messageDiv.textContent = '❌ Connection error. Please try again.';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Reset Unverified Account';
+              }
+            });
+          </script>
+        </body>
+        </html>
+      `, {
+        headers: { "Content-Type": "text/html" }
+      });
+    }
+    
+    // Endpoint para limpar conta não verificada e permitir novo signup
+    if (url.pathname === "/auth/reset-unverified" && request.method === "POST") {
+      try {
+        const body = await request.json() as { email: string };
+        const email = body.email;
+        
+        if (!email) {
+          return new Response(JSON.stringify({ error: "Email is required" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+          });
+        }
+        
+        // Verificar se existe usuário com este email e provider password
+        const existingUser = await env.AUTH_DB.prepare(
+          `SELECT id, email, provider FROM user WHERE email = ? AND provider = 'password'`
+        ).bind(email).first();
+        
+        if (existingUser) {
+          // Deletar o usuário não verificado para permitir novo cadastro
+          await env.AUTH_DB.prepare(
+            `DELETE FROM user WHERE id = ? AND provider = 'password'`
+          ).bind(existingUser.id).run();
+          
+          console.log(`✅ Unverified account removed for ${email}. User can try again.`);
+          
+          return new Response(JSON.stringify({ 
+            success: true,
+            message: "Previous account removed. You can create a new account now."
+          }), {
+            status: 200,
+            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+          });
+        } else {
+          return new Response(JSON.stringify({ 
+            success: false,
+            message: "No account found with this email."
+          }), {
+            status: 404,
+            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+          });
+        }
+      } catch (error) {
+        console.error(`Error resetting unverified account:`, error);
+        return new Response(JSON.stringify({ error: String(error) }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+        });
+      }
+    }
+    
     // Debug endpoint to list all users
     if (url.pathname === "/debug/users") {
       try {
@@ -244,31 +514,31 @@ export default {
                 console.log(`[DEBUG] Verification code for ${email}: ${code}`);
                 
                 // Re-throw with user-friendly message
-                throw new Error('Não foi possível enviar o email de verificação. Verifique sua conexão e tente novamente. Se o problema persistir, entre em contato com o suporte.');
+                throw new Error('Failed to send verification email. Check your connection and try again. If the problem persists, contact support.');
               }
             },
             copy: {
               // Customização dos textos da interface
               input_email: "Email",
-              input_code: "Código de Verificação",
-              input_password: "Senha",
-              input_repeat: "Confirmar Senha",
-              button_continue: "Continuar",
-              code_resend: "Reenviar código de verificação",
-              code_return: "← Voltar ao login",
-              register: "Criar conta",
-              register_prompt: "Não tem uma conta?",
-              login: "Entrar",
-              login_prompt: "Já tem uma conta?",
-              change_prompt: "Esqueceu a senha?",
-              login_description: "Entre com seu email para receber um código de verificação",
-              register_description: "Crie uma nova conta com seu email",
-              error_email_taken: "Este email já está cadastrado",
-              error_invalid_code: "Código inválido. Tente novamente.",
-              error_invalid_email: "Email inválido",
-              error_invalid_password: "Senha inválida. Use pelo menos 8 caracteres.",
-              error_password_mismatch: "As senhas não coincidem",
-              error_validation_error: "Erro de validação. Verifique os campos.",
+              input_code: "Verification Code",
+              input_password: "Password",
+              input_repeat: "Confirm Password",
+              button_continue: "Continue",
+              code_resend: "Resend verification code",
+              code_return: "← Back to login",
+              register: "Create account",
+              register_prompt: "Don't have an account?",
+              login: "Login",
+              login_prompt: "Already have an account?",
+              change_prompt: "Forgot password?",
+              login_description: "Enter your email to receive a verification code",
+              register_description: "Create a new account using your email",
+              error_email_taken: "❌ This email is already registered but not verified. Try to LOGIN instead of creating an account. If you didn't receive the code, use the 'Resend verification code' button.",
+              error_invalid_code: "❌ Invalid code. Check your input or click 'Resend verification code'.",
+              error_invalid_email: "❌ Invalid email. Check the format.",
+              error_invalid_password: "❌ Password too weak. Use at least 8 characters.",
+              error_password_mismatch: "❌ Passwords do not match. Please re-enter.",
+              error_validation_error: "❌ Validation error. Check all fields.",
             },
           }),
         ),
@@ -532,8 +802,8 @@ async function sendVerificationEmail(env: Env, email: string, code: string): Pro
             Email: email,
           },
         ],
-        Subject: 'Seu Código de Verificação - CallNow',
-        TextPart: `Olá,\n\nVocê solicitou um código de verificação para acessar sua conta CallNow.\n\nSeu código de verificação é: ${code}\n\nDigite este código na página de login para continuar.\n\nEste código expira em 10 minutos.\n\nSe você não solicitou este código, ignore este email.\n\n© ${new Date().getFullYear()} CallNow. Todos os direitos reservados.`,
+        Subject: 'Your Verification Code - CallNow',
+        TextPart: `Hello,\n\nYou requested a verification code to access your CallNow account.\n\nYour verification code is: ${code}\n\nEnter this code on the login page to continue.\n\nThis code expires in 10 minutes.\n\nIf you did not request this code, please ignore this email.\n\n© ${new Date().getFullYear()} CallNow. All rights reserved.`,
         HTMLPart: `
           <!DOCTYPE html>
           <html>
@@ -551,20 +821,20 @@ async function sendVerificationEmail(env: Env, email: string, code: string): Pro
             <body>
               <div class="container">
                 <div class="header">
-                  <h1>🔐 Código de Verificação</h1>
+                  <h1>🔐 Verification Code</h1>
                 </div>
                 <div class="content">
-                  <p>Olá,</p>
-                  <p>Você solicitou um código de verificação para acessar sua conta CallNow.</p>
+                  <p>Hello,</p>
+                  <p>You requested a verification code to access your CallNow account.</p>
                   <div class="code-box">
                     <div class="code">${code}</div>
                   </div>
-                  <p>Digite este código na página de login para continuar.</p>
-                  <p><strong>Este código expira em 10 minutos.</strong></p>
-                  <p>Se você não solicitou este código, ignore este email.</p>
+                  <p>Enter this code on the login page to continue.</p>
+                  <p><strong>This code expires in 10 minutes.</strong></p>
+                  <p>If you did not request this code, please ignore this email.</p>
                 </div>
                 <div class="footer">
-                  <p>© ${new Date().getFullYear()} CallNow. Todos os direitos reservados.</p>
+                  <p>© ${new Date().getFullYear()} CallNow. All rights reserved.</p>
                 </div>
               </div>
             </body>
