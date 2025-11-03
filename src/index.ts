@@ -30,7 +30,97 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const url = new URL(request.url);
     
-    // Endpoint /userinfo - returns authenticated user information
+    // Debug endpoint to list all users
+    if (url.pathname === "/debug/users") {
+      try {
+        const allUsers = await env.AUTH_DB.prepare(
+          `SELECT id, email, name, provider, provider_id, created_at FROM user ORDER BY created_at DESC LIMIT 10`
+        ).all();
+        
+        return new Response(JSON.stringify({
+          count: allUsers.results?.length || 0,
+          users: allUsers.results
+        }, null, 2), {
+          status: 200,
+          headers: { 
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*"
+          }
+        });
+      } catch (error) {
+        console.error(`Error listing users:`, error);
+        return new Response(JSON.stringify({ error: String(error) }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+    
+    // Endpoint /auth/fetch-openauth-profile/:userId - returns authenticated user information
+    const profileMatch = url.pathname.match(/^\/auth\/fetch-openauth-profile\/(.+)$/);
+    if (profileMatch) {
+      try {
+        let userId = decodeURIComponent(profileMatch[1]);
+        console.log(`[Profile] Raw user ID from URL: "${userId}"`);
+        
+        // Remove "user:" prefix if present (OpenAuth format)
+        if (userId.startsWith('user:')) {
+          userId = userId.substring(5); // Remove "user:" prefix
+          console.log(`[Profile] Removed prefix, searching for: "${userId}"`);
+        }
+
+        // First, let's check what users exist in the database
+        const allUsers = await env.AUTH_DB.prepare(
+          `SELECT id, email FROM user LIMIT 5`
+        ).all();
+        console.log(`[Profile] Sample users in DB:`, JSON.stringify(allUsers.results));
+
+        const user = await getUserInfo(env, userId);
+        if (!user) {
+          console.error(`[Profile] User not found: "${userId}"`);
+          console.error(`[Profile] All users query returned: ${allUsers.results?.length || 0} users`);
+          
+          return new Response(JSON.stringify({ 
+            error: "User not found in OpenAuth",
+            detail: `No user found with ID: ${userId}`,
+            debug: {
+              requestedId: userId,
+              totalUsersInDb: allUsers.results?.length || 0,
+              sampleUsers: allUsers.results
+            }
+          }), {
+            status: 404,
+            headers: { 
+              "Content-Type": "application/json",
+              "Access-Control-Allow-Origin": "*"
+            }
+          });
+        }
+
+        console.log(`[Profile] ✅ User found:`, JSON.stringify(user));
+        return new Response(JSON.stringify(user), {
+          status: 200,
+          headers: { 
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*"
+          }
+        });
+      } catch (error) {
+        console.error(`[Profile] Error fetching user profile:`, error);
+        return new Response(JSON.stringify({ 
+          error: "Internal server error",
+          detail: error instanceof Error ? error.message : String(error)
+        }), {
+          status: 500,
+          headers: { 
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*"
+          }
+        });
+      }
+    }
+    
+    // Endpoint /userinfo - returns authenticated user information (legacy endpoint)
     if (url.pathname === "/userinfo") {
       try {
         // Get user ID from query parameter (in real app, get from session/token)
@@ -312,10 +402,13 @@ export default {
           throw new Error(`Unknown provider: ${(value as any).provider}`);
         }
 
-        console.log("Final user info to store:", userInfo);
+        console.log("[OAuth Success] Final user info to store:", JSON.stringify(userInfo));
 
+        const userId = await getOrCreateUser(env, userInfo);
+        console.log(`[OAuth Success] User ID returned: ${userId}`);
+        
         return ctx.subject("user", {
-          id: await getOrCreateUser(env, userInfo),
+          id: userId,
         });
       },
     }).fetch(request, env, ctx);
@@ -323,32 +416,53 @@ export default {
 } satisfies ExportedHandler<Env>;
 
 async function getOrCreateUser(env: Env, userInfo: UserInfo): Promise<string> {
-  const result = await env.AUTH_DB.prepare(
-    `
-    INSERT INTO user (email, name, avatar_url, provider, provider_id, updated_at)
-    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    ON CONFLICT (email) DO UPDATE SET 
-      name = excluded.name,
-      avatar_url = excluded.avatar_url,
-      provider = excluded.provider,
-      provider_id = excluded.provider_id,
-      updated_at = CURRENT_TIMESTAMP
-    RETURNING id;
-    `,
-  )
-    .bind(
-      userInfo.email,
-      userInfo.name || null,
-      userInfo.avatar_url || null,
-      userInfo.provider,
-      userInfo.provider_id || null
+  console.log(`[getOrCreateUser] Attempting to create/update user:`, JSON.stringify(userInfo));
+  
+  try {
+    const result = await env.AUTH_DB.prepare(
+      `
+      INSERT INTO user (email, name, avatar_url, provider, provider_id, updated_at)
+      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT (email) DO UPDATE SET 
+        name = excluded.name,
+        avatar_url = excluded.avatar_url,
+        provider = excluded.provider,
+        provider_id = excluded.provider_id,
+        updated_at = CURRENT_TIMESTAMP
+      RETURNING id;
+      `,
     )
-    .first<{ id: string }>();
-  if (!result) {
-    throw new Error(`Unable to process user: ${userInfo.email}`);
+      .bind(
+        userInfo.email,
+        userInfo.name || null,
+        userInfo.avatar_url || null,
+        userInfo.provider,
+        userInfo.provider_id || null
+      )
+      .first<{ id: string }>();
+    
+    if (!result) {
+      console.error(`[getOrCreateUser] Failed to insert/update user: ${userInfo.email}`);
+      throw new Error(`Unable to process user: ${userInfo.email}`);
+    }
+    
+    console.log(`[getOrCreateUser] ✅ Successfully created/updated user ${result.id}:`, {
+      id: result.id,
+      email: userInfo.email,
+      name: userInfo.name,
+      provider: userInfo.provider,
+      provider_id: userInfo.provider_id
+    });
+    
+    // Verify the user was actually saved
+    const verifyUser = await getUserInfo(env, result.id);
+    console.log(`[getOrCreateUser] Verification query result:`, JSON.stringify(verifyUser));
+    
+    return result.id;
+  } catch (error) {
+    console.error(`[getOrCreateUser] Database error:`, error);
+    throw error;
   }
-  console.log(`Found or created user ${result.id} with email ${userInfo.email} and name ${userInfo.name}`);
-  return result.id;
 }
 
 async function getUserInfo(env: Env, userId: string): Promise<any> {
