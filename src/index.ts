@@ -1031,9 +1031,9 @@ async function sendVerificationEmail(env: Env, email: string, code: string): Pro
   });
 
   if (!response.ok) {
-    const errorData = await response.text();
-    console.error('Mailjet API error:', errorData);
-    throw new Error(`Failed to send email via Mailjet: ${response.status} ${response.statusText}`);
+    const errorBody = await response.text();
+    console.error(`Mailjet API Error: Status ${response.status}`, errorBody);
+    throw new Error(`Failed to send email via Mailjet: ${response.status} ${response.statusText}. Response: ${errorBody}`);
   }
 
   const result = await response.json();
