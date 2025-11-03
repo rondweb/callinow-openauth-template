@@ -238,12 +238,37 @@ export default {
                 console.log(`✅ Verification code sent to ${email}`);
               } catch (error) {
                 console.error(`❌ Failed to send email to ${email}:`, error);
-                // Fallback: log the code (for development only)
-                console.log(`Verification code for ${email}: ${code}`);
+                console.error(`Error details:`, error);
+                
+                // Log the code for debugging (helps in troubleshooting)
+                console.log(`[DEBUG] Verification code for ${email}: ${code}`);
+                
+                // Re-throw with user-friendly message
+                throw new Error('Não foi possível enviar o email de verificação. Verifique sua conexão e tente novamente. Se o problema persistir, entre em contato com o suporte.');
               }
             },
             copy: {
-              input_code: "Código de Verificação (verifique seu email)",
+              // Customização dos textos da interface
+              input_email: "Email",
+              input_code: "Código de Verificação",
+              input_password: "Senha",
+              input_repeat: "Confirmar Senha",
+              button_continue: "Continuar",
+              code_resend: "Reenviar código de verificação",
+              code_return: "← Voltar ao login",
+              register: "Criar conta",
+              register_prompt: "Não tem uma conta?",
+              login: "Entrar",
+              login_prompt: "Já tem uma conta?",
+              change_prompt: "Esqueceu a senha?",
+              login_description: "Entre com seu email para receber um código de verificação",
+              register_description: "Crie uma nova conta com seu email",
+              error_email_taken: "Este email já está cadastrado",
+              error_invalid_code: "Código inválido. Tente novamente.",
+              error_invalid_email: "Email inválido",
+              error_invalid_password: "Senha inválida. Use pelo menos 8 caracteres.",
+              error_password_mismatch: "As senhas não coincidem",
+              error_validation_error: "Erro de validação. Verifique os campos.",
             },
           }),
         ),
