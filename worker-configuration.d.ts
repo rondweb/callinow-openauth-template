@@ -16,6 +16,8 @@ declare namespace Cloudflare {
 		MAILJET_SECRET_KEY?: string;
 		EMAIL_FROM_EMAIL?: string;
 		EMAIL_FROM_NAME?: string;
+		// OpenAuth encryption keys
+		PRIVATE_KEY?: string;
 	}
 }
 interface Env extends Cloudflare.Env {}

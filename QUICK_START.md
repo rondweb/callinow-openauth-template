@@ -21,6 +21,35 @@
 
 ## 📝 PRÓXIMOS PASSOS PARA USAR
 
+### 0. Configurar Variáveis de Ambiente
+
+**Criar arquivo de configuração local:**
+```bash
+# Copie o arquivo de exemplo
+cp .dev.vars.example .dev.vars
+```
+
+**Edite o arquivo `.dev.vars`** e adicione suas credenciais reais:
+
+- **Mailjet** (obrigatório para envio de emails):
+  - Obtenha em: https://app.mailjet.com/account/apikeys
+  - Configure `MAILJET_API_KEY`, `MAILJET_SECRET_KEY`
+  - Verifique seu domínio/email em: https://app.mailjet.com/account/sender
+
+- **GitHub OAuth** (opcional):
+  - Obtenha em: https://github.com/settings/developers
+  - Configure `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
+
+- **Google OAuth** (opcional):
+  - Obtenha em: https://console.cloud.google.com/apis/credentials
+  - Configure `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+
+- **Microsoft OAuth** (opcional):
+  - Obtenha em: https://portal.azure.com
+  - Configure `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`
+
+📚 **Documentação completa**: Veja `EMAIL_CONFIGURATION.md` para mais detalhes.
+
 ### 1. Aplicar a Migração do Banco de Dados
 
 **Para desenvolvimento local:**

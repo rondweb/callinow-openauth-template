@@ -7,6 +7,7 @@ import { GoogleProvider } from "@openauthjs/openauth/provider/google";
 import { MicrosoftProvider } from "@openauthjs/openauth/provider/microsoft";
 import { createSubjects } from "@openauthjs/openauth/subject";
 import { object, string } from "valibot";
+import { CustomCloudflareStorage } from "./custom-storage";
 
 // This value should be shared between the OpenAuth server Worker and other
 // client Workers that you connect to it, so the types and schema validation are
@@ -666,10 +667,11 @@ export default {
 
     // The real OpenAuth server code starts here:
     return issuer({
-      storage: CloudflareStorage({
+      storage: CustomCloudflareStorage({
         namespace: env.AUTH_STORAGE,
       }),
       subjects,
+      ...(env.PRIVATE_KEY ? { keys: { private: env.PRIVATE_KEY } } : {}),
       providers: {
         password: PasswordProvider(
           PasswordUI({
